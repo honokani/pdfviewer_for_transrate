@@ -1,0 +1,118 @@
+//@import "~bootstrap/scss/bootstrap"
+* { margin: 0; padding: 0; }
+
+$icon_sz: 48px
+$gap: 10px
+
+$h_head: 60px
+$h_foot: 24px
+$h_content: calc(100vh - #{$h_head} - #{$h_foot})
+$h_subtitle: 60px
+$h_textarea: 60px
+$h_icon: $icon_sz
+
+$w_head: 100vw
+$w_button: 64px
+$w_content: 100vw
+$w_hist: 120px
+$w_chatlog: calc(#{$w_content} + 17px)
+$w_icon_half: calc(#{$icon_sz} / 2)
+
+$w_mobile_boader: 400px
+
+
+@mixin locateCenter($v: flex, $p: center)
+  display: $v
+  align-items: $p
+
+.root
+  height: 100vh
+  display: grid
+  grid-template-rows: $h_head 1fr $h_foot
+
+  header
+    display: grid
+    grid-template-columns: 1fr $w_button
+    background-color: #222
+    color: white
+    .urlarea
+      width: calc(#{$w_head} - #{$w_button})
+      font-size: 32px
+      font-weight: bold
+      .inputtext
+        width: calc(#{$w_head} - #{$w_button})
+      @include locateCenter()
+    .sign_io
+      color: white
+      @include locateCenter()
+
+  footer
+    background-color: #222
+    color: white
+    @include locateCenter()
+
+  .content
+    display: grid
+    grid-template-columns: $w_hist 1fr
+    .history
+      overflow: scroll
+      height: $h_content
+      width: $w_hist
+      background-color: gray
+    .pdfarea
+      height: $h_content
+      width: calc(#{$w_content} - #{$w_hist} + 17)
+      overflow: scroll
+      .cnv
+        height: $h_content
+        margin: none
+        transform: scale(0.8)
+        .elm-canvas
+          .canvas
+            top: 0
+            left: 0
+
+        #textLayer
+          position: absolute
+          left: 0
+          top: 0
+          right: 0
+          bottom: 0
+          color: #000
+          cursor: text
+          font-family: sans-serif
+          div
+            -webkit-transform-origin: 0% 0%
+            transform-origin: 0% 0%
+            color: transparent
+            position: absolute
+            line-height: 1
+            white-space: pre
+          .highlight
+            padding: 1px
+            background-color: rgba(180, 0, 170, 0.2)
+            border-radius: 4px
+          .highlight.begin
+            border-radius: 4px 0px 0px 4px
+          .highlight.end
+            border-radius: 0px 4px 4px 0px
+          .highlight.middle
+            border-radius: 0px
+          .highlight.selected
+            background-color: rgba(0, 100, 0, 0.2)
+          .endOfContent
+            display: block
+            position: absolute
+            left: 0px
+            top: 100%
+            right: 0px
+            bottom: 0px
+            z-index: -1
+            cursor: default
+            -webkit-user-select: none
+            -moz-user-select: none
+            -ms-user-select: none
+            user-select: none
+          .endOfContent
+            .active
+              top: 0px
