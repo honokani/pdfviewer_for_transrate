@@ -1,31 +1,35 @@
 module PdfTranse exposing (Flags, Model, Msg, program)
 
 -- common modules
-import Browser              as Brs
-import Browser.Navigation   as Nav
-import Html                 as H      exposing (..)
-import Html.Attributes                exposing (..)
-import Html.Events                    exposing (onClick, onInput, onSubmit)
+import Browser            as Brs
+import Browser.Navigation as Nav
+import Html               as H   exposing (..)
+import Html.Attributes           exposing (..)
+import Html.Events               exposing (onClick, onInput, onSubmit)
 import Http
 -- canvas
-import Canvas               as Cnv    exposing (..)
+import Canvas             as Cnv exposing (..)
 import Color
---
-import Port                 as P
+-- my modules
+import Port               as P
 
 
 
 type alias Flags = Maybe Int
 
 type alias Model =
-    { page: Int
-    , url: String
-    , history: List String
+    { page : Int
+    , url : String
+    , w_flgs : List Bool
+    , words : List String
     }
 
 type Msg
     = Undef
     | LoadPdf
+    | SendWords
+    | DelWords
+    | ToggleWordFlg Int
     | ChangeUrl String
     | GotFocusedStr (Maybe String)
     | PageInc
@@ -49,7 +53,7 @@ init mayP =
             Nothing -> 1
             Just i -> i
     in
-        ( Model p "" []
+        ( Model p "" [] []
         , Cmd.none
         )
 
@@ -58,7 +62,6 @@ subscriptions : Model -> Sub Msg
 subscriptions mdl = Sub.batch
     [ P.sendFocusedStr GotFocusedStr
     ]
-
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -70,15 +73,43 @@ update msg mdl = case msg of
             newM = { mdl | page = 1}
         in
             ( newM, P.loadPdfFile mdl.url )
+    ToggleWordFlg n ->
+        let
+            n_a = List.take n mdl.w_flgs
+            n_b = List.drop n mdl.w_flgs
+            n_bh = Maybe.map not <| List.head n_b
+            n_bt = List.tail n_b
+            new_f = Maybe.map (List.append n_a) <| Maybe.map2 (::) n_bh n_bt
+            newM = { mdl | w_flgs = Maybe.withDefault mdl.w_flgs new_f}
+        in
+            ( newM, Cmd.none)
+    SendWords ->
+        let
+            (wt, _) = List.partition (\(_,y) -> y) <| zip mdl.words mdl.w_flgs
+            tgt = List.map Tuple.first wt
+        in
+            ( mdl, P.sendWordsToFB tgt)
+    DelWords ->
+        let
+            (_, wf) = List.partition (\(_,y) -> y) <| zip mdl.words mdl.w_flgs
+            leave = List.map Tuple.first wf
+            l_f = List.repeat (List.length leave) False
+            newM = { mdl | words = leave, w_flgs = l_f}
+        in
+            ( newM, Cmd.none)
     ChangeUrl s ->
         let
             newM = { mdl | url = s}
         in
             ( newM, Cmd.none )
-    GotFocusedStr mayS -> case mayS of
+    GotFocusedStr mayStr -> case mayStr of
         Just s ->
             let
-                newM = { mdl | history = s :: mdl.history }
+                s_fixed = String.toLower <| String.trim s
+                new_w = if List.member s_fixed mdl.words
+                    then mdl.words
+                    else s_fixed :: mdl.words
+                newM = { mdl | words = new_w, w_flgs = False :: mdl.w_flgs}
             in
                 ( newM, Cmd.none)
         Nothing ->
@@ -114,35 +145,53 @@ buildHtml mdl =
                                  , class "inputtext"
                                  ] []
                          ]
-        btn = button [onClick LoadPdf] [H.text "load"]
-        hist = div [class "history"] <| buildHist mdl.history
-        txtLay = div [id "textLayer"] []
+        urlbtn = button [onClick LoadPdf] [H.text "load"]
+
+        nav = div [class "nav"] [ hist, btnset ]
+        hist = div [class "words"] <| buildHist <| enumerate <| zip mdl.w_flgs mdl.words
+        btnset = div [class "btnset"] [ delbtn
+                                      , sndbtn
+                                      ]
+        sndbtn = button [onClick SendWords] [H.text "send"]
+        delbtn = button [onClick DelWords] [H.text "Del"]
+        pdfarea = div [class "pdfarea"] [cnv]
         cnv = div [class "cnv"]
             [ Cnv.toHtml (200,200) [id "the-canvas"] []
             , txtLay
             ]
-        pdfarea = div [class "pdfarea"] [cnv]
+        txtLay = div [id "textLayer"] []
         shiftPageI = button [onClick PageInc] [H.text ">"]
         shiftPageD = button [onClick PageDec] [H.text "<"]
 
-        con = div [class "content"] [ hist
+        con = div [class "content"] [ nav
                                     , pdfarea
                                     ]
-        h = header [] [ urlArea
-                      , btn
-                      ]
-        f = footer [] [ shiftPageD
-                      , div [class "page"] [H.text <| String.fromInt mdl.page]
-                      , shiftPageI
-                      ]
+        head = header [] [ urlArea
+                         , urlbtn
+                         ]
+        foot = footer [] [ shiftPageD
+                         , div [class "page"] [H.text <| String.fromInt mdl.page]
+                         , shiftPageI
+                         ]
     in
-        div [ class "root"] [ h
+        div [ class "root"] [ head
                             , con
-                            , f
+                            , foot
                             ]
+
+
+enumerate l = List.indexedMap Tuple.pair l
+zip l r = List.map2 Tuple.pair l r
+
 
 buildHist hs = case List.head hs of
     Nothing ->
         []
-    Just s ->
-        (div [class "histelem"] [H.text s]) :: buildHist (List.drop 1 hs)
+    Just (n, (b, s)) ->
+        let
+            line = makeLine b s
+        in
+            (div [class "histelem", onClick <| ToggleWordFlg n] [H.text line]) :: buildHist (List.drop 1 hs)
+
+makeLine b s = (if b then "[x] " else "[_] ") ++ s
+

@@ -5,16 +5,17 @@ $icon_sz: 48px
 $gap: 10px
 
 $h_head: 60px
-$h_foot: 24px
+$h_foot: 40px
 $h_content: calc(100vh - #{$h_head} - #{$h_foot})
+$h_sndbtn: 40px
 $h_subtitle: 60px
 $h_textarea: 60px
 $h_icon: $icon_sz
 
 $w_head: 100vw
-$w_button: 64px
+$w_urlbtn: 64px
 $w_content: 100vw
-$w_hist: 120px
+$w_words: 300px
 $w_chatlog: calc(#{$w_content} + 17px)
 $w_icon_half: calc(#{$icon_sz} / 2)
 
@@ -32,15 +33,15 @@ $w_mobile_boader: 400px
 
   header
     display: grid
-    grid-template-columns: 1fr $w_button
+    grid-template-columns: 1fr $w_urlbtn
     background-color: #222
     color: white
     .urlarea
-      width: calc(#{$w_head} - #{$w_button})
+      width: calc(#{$w_head} - #{$w_urlbtn})
       font-size: 32px
       font-weight: bold
       .inputtext
-        width: calc(#{$w_head} - #{$w_button})
+        width: calc(#{$w_head} - #{$w_urlbtn})
       @include locateCenter()
     .sign_io
       color: white
@@ -53,15 +54,25 @@ $w_mobile_boader: 400px
 
   .content
     display: grid
-    grid-template-columns: $w_hist 1fr
-    .history
-      overflow: scroll
-      height: $h_content
-      width: $w_hist
-      background-color: gray
+    grid-template-columns: $w_words 1fr
+    .nav
+      display: grid
+      grid-template-rows: 1fr $h_sndbtn
+      .words
+        font-size: 28px
+        overflow: scroll
+        height: culc(#{$h_content} - #{h_sndbtn})
+        width: $w_words
+        background-color: gray
+      .btnset
+        display: grid
+        grid-template-columns: 1fr 1fr
+        width: $w_words
+        .sndbtn
+          height: $h_sndbtn
     .pdfarea
       height: $h_content
-      width: calc(#{$w_content} - #{$w_hist} + 17)
+      width: calc(#{$w_content} - #{$w_words} + 17)
       overflow: scroll
       .cnv
         height: $h_content
@@ -116,3 +127,4 @@ $w_mobile_boader: 400px
           .endOfContent
             .active
               top: 0px
+

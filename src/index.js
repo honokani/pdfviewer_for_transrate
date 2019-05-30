@@ -60,6 +60,8 @@ var loadPage = (d, p) => {
                 l = textItem.str.length - 1
                 if (textItem.str[l] == "-") { 
                     textItem.str = textItem.str.substr(0,l)
+                } else { 
+                    textItem.str = textItem.str + " "
                 }
                 item.textContent = textItem.str
                 item.style.fontFamily = style.fontFamily;
@@ -86,24 +88,31 @@ var loadPage = (d, p) => {
     })
 }
 
+
+// firebase
+const firebase = require("firebase")
+require("firebase/firestore")
+const get_fbconf = require('./firebase_config.js')
+firebase.initializeApp( get_fbconf() )
+const fb_fs = firebase.firestore()
+
 // Elm
 var page = 1
-
 require('elm-canvas')
 const { Elm } = require("./Main.elm")
 const elmnode = document.getElementById('elmapp')
-const app     = Elm.Main.init( { node:elmnode
-                               , flags: 1
-                               }
-                             )
+const app = Elm.Main.init( { node:elmnode
+                           , flags: 1
+                           }
+                         )
 
 base64ToUint8Array = (base64) => {
     var raw = atob(base64);
     var uint8Array = new Uint8Array(new ArrayBuffer(raw.length));
     for (var i = 0, len = raw.length; i < len; ++i) {
-        uint8Array[i] = raw.charCodeAt(i);
+        uint8Array[i] = raw.charCodeAt(i)
     }
-    return uint8Array;
+    return uint8Array
 }
 
 var pdfurl = ""
@@ -117,6 +126,15 @@ app.ports.pageIncrease.subscribe( (p) => {
 app.ports.pageDecrease.subscribe( (p) => { 
     loadPage(pdfurl, p)
 })
+const fb_inc = firebase.firestore.FieldValue.increment(1)
+app.ports.sendWordsToFB.subscribe( (ws) => { 
+    for( var i in ws ){
+        param = {}
+        param[ws[i]] = fb_inc
+        tgtRef = fb_fs.collection('words').doc("app")
+        tgtRef.update( param )
+    }
+})
 
 
 var onTextLayer = false
@@ -128,9 +146,9 @@ document.getElementById("textLayer")
 var sOld = ""
 document.onmouseup = () => {
     if (onTextLayer){
-        var s = String(document.getSelection())
+        var s = String(document.getSelection()).trim()
         l = s.length
-        if (0 < l && l < 20 && sOld != s) { 
+        if (0 < l && l < 24 && sOld != s) { 
             app.ports.sendFocusedStr.send( s )
         }
         sOld = s
