@@ -18,14 +18,22 @@ import Port               as P
 type alias Flags = Maybe Int
 
 type alias Model =
-    { page : Int
+    { us : UserState
+    , page : Int
     , url : String
     , w_flgs : List Bool
     , words : List String
     }
 
+type UserState
+    = Guest
+    | LoggedIn
+
 type Msg
     = Undef
+    | LoggingIn
+    | LoggingOut
+    | GotUserState Bool
     | LoadPdf
     | SendWords
     | DelWords
@@ -53,7 +61,7 @@ init mayP =
             Nothing -> 1
             Just i -> i
     in
-        ( Model p "" [] []
+        ( Model Guest p "" [] []
         , Cmd.none
         )
 
@@ -61,6 +69,7 @@ init mayP =
 subscriptions : Model -> Sub Msg
 subscriptions mdl = Sub.batch
     [ P.sendFocusedStr GotFocusedStr
+    , P.userStateUpdate GotUserState
     ]
 
 
@@ -68,6 +77,19 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg mdl = case msg of
     Undef ->
         ( mdl, Cmd.none )
+    LoggingIn ->
+        ( mdl, P.loginToFB () )
+    LoggingOut ->
+        ( mdl, P.logoutToFB () )
+    GotUserState b ->
+        let
+            newM = if b
+                then
+                    { mdl | us = LoggedIn }
+                else
+                    { mdl | us = Guest }
+        in
+            ( newM, Cmd.none )
     LoadPdf ->
         let
             newM = { mdl | page = 1}
@@ -88,7 +110,7 @@ update msg mdl = case msg of
             (wt, _) = List.partition (\(_,y) -> y) <| zip mdl.words mdl.w_flgs
             tgt = List.map Tuple.first wt
         in
-            ( mdl, P.sendWordsToFB tgt)
+            ( mdl, P.sendWordsToFB tgt )
     DelWords ->
         let
             (_, wf) = List.partition (\(_,y) -> y) <| zip mdl.words mdl.w_flgs
@@ -138,14 +160,22 @@ view mdl =
 
 buildHtml mdl =
     let
-        urlArea = H.form [ class "urlarea", onSubmit LoadPdf ]
-                         [ input [ placeholder "input url here"
-                                 , onInput  ChangeUrl
-                                 , value mdl.url
-                                 , class "inputtext"
-                                 ] []
-                         ]
-        urlbtn = button [onClick LoadPdf] [H.text "load"]
+        urlArea = case mdl.us of
+            Guest -> 
+                div [class "login_msg"] [H.text "please login! >>> "]
+            LoggedIn ->
+                H.form [ class "urlarea", onSubmit LoadPdf ]
+                       [ input [ placeholder "input url here"
+                               , onInput  ChangeUrl
+                               , value mdl.url
+                               , class "inputtext"
+                               ] []
+                       ]
+        urlbtn = case mdl.us of
+            Guest -> 
+                button [onClick LoggingIn] [H.text "Login"]
+            LoggedIn ->
+                button [onClick LoadPdf] [H.text "load"]
 
         nav = div [class "nav"] [ hist, btnset ]
         hist = div [class "words"] <| buildHist <| enumerate <| zip mdl.w_flgs mdl.words
@@ -160,8 +190,20 @@ buildHtml mdl =
             , txtLay
             ]
         txtLay = div [id "textLayer"] []
+
+        f_infos = div [class "f_infos"] <| case mdl.us of
+            Guest -> 
+                []
+            LoggedIn ->
+                [ shiftPageD
+                , div [class "page"] [H.text <| String.fromInt mdl.page]
+                , shiftPageI
+                , div [] []
+                , logout
+                ]
         shiftPageI = button [onClick PageInc] [H.text ">"]
         shiftPageD = button [onClick PageDec] [H.text "<"]
+        logout = button [onClick LoggingOut] [H.text "logout"]
 
         con = div [class "content"] [ nav
                                     , pdfarea
@@ -169,9 +211,7 @@ buildHtml mdl =
         head = header [] [ urlArea
                          , urlbtn
                          ]
-        foot = footer [] [ shiftPageD
-                         , div [class "page"] [H.text <| String.fromInt mdl.page]
-                         , shiftPageI
+        foot = footer [] [ f_infos
                          ]
     in
         div [ class "root"] [ head
@@ -192,6 +232,7 @@ buildHist hs = case List.head hs of
             line = makeLine b s
         in
             (div [class "histelem", onClick <| ToggleWordFlg n] [H.text line]) :: buildHist (List.drop 1 hs)
+
 
 makeLine b s = (if b then "[x] " else "[_] ") ++ s
 

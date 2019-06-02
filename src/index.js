@@ -10,11 +10,11 @@ var loadPage = (d, p) => {
     var scale = 1.4
     pdfjsLib.getDocument(d)
     .then( (pdf) => {
-        console.log('PDF loaded')
+        //console.log('PDF loaded')
         return pdf.getPage(p)
     })
     .then( (page) => {
-        console.log('Page loaded')
+        //console.log('Page loaded')
         var viewport = page.getViewport(scale)
         var canvas = document.getElementById('the-canvas')
         var context = canvas.getContext('2d')
@@ -25,7 +25,7 @@ var loadPage = (d, p) => {
                             }
         return page.render(renderContext)
         .then( () => {
-            console.log('Got Texts')
+            //console.log('Got Texts')
             return page.getTextContent();
         })
         .then( (textContent) => {
@@ -83,7 +83,7 @@ var loadPage = (d, p) => {
             //    }
             //)
         }).then( () => {
-            console.log('Page rendered')
+            //console.log('Page rendered')
         })
     })
 }
@@ -95,6 +95,7 @@ require("firebase/firestore")
 const get_fbconf = require('./firebase_config.js')
 firebase.initializeApp( get_fbconf() )
 const fb_fs = firebase.firestore()
+const provider = new firebase.auth.GoogleAuthProvider();
 
 // Elm
 var page = 1
@@ -116,6 +117,32 @@ base64ToUint8Array = (base64) => {
 }
 
 var pdfurl = ""
+firebase.auth().onAuthStateChanged( (u) => {
+    if (u) {
+        app.ports.userStateUpdate.send( true )
+    } else {
+        app.ports.userStateUpdate.send( false )
+    }
+})
+app.ports.loginToFB.subscribe( () => {
+    firebase.auth().signInWithPopup(provider).then((_) => {}).catch((error) => {})
+})
+app.ports.logoutToFB.subscribe( () => {
+    firebase.auth().signOut().then((_) => {}).catch((error) => {})
+})
+const fb_inc = firebase.firestore.FieldValue.increment(1)
+app.ports.sendWordsToFB.subscribe( (ws) => { 
+    const user = firebase.auth().currentUser
+    if(user) { 
+        for( var i in ws ){
+            param = {}
+            param[ws[i]] = fb_inc
+            tgtRef = fb_fs.collection('words').doc("app")
+            tgtRef.update( param )
+        }
+    }
+})
+
 app.ports.loadPdfFile.subscribe( (url) => {
     pdfurl = url
     loadPage(pdfurl, page)
@@ -125,15 +152,6 @@ app.ports.pageIncrease.subscribe( (p) => {
 })
 app.ports.pageDecrease.subscribe( (p) => { 
     loadPage(pdfurl, p)
-})
-const fb_inc = firebase.firestore.FieldValue.increment(1)
-app.ports.sendWordsToFB.subscribe( (ws) => { 
-    for( var i in ws ){
-        param = {}
-        param[ws[i]] = fb_inc
-        tgtRef = fb_fs.collection('words').doc("app")
-        tgtRef.update( param )
-    }
 })
 
 

@@ -18,6 +18,8 @@ $w_content: 100vw
 $w_words: 300px
 $w_chatlog: calc(#{$w_content} + 17px)
 $w_icon_half: calc(#{$icon_sz} / 2)
+$w_foot: 100vw
+$w_ctrl: 48px
 
 $w_mobile_boader: 400px
 
@@ -36,6 +38,10 @@ $w_mobile_boader: 400px
     grid-template-columns: 1fr $w_urlbtn
     background-color: #222
     color: white
+    .login_msg
+      width: calc(#{$w_head} - #{$w_urlbtn})
+      font-size: 32px
+      font-weight: bold
     .urlarea
       width: calc(#{$w_head} - #{$w_urlbtn})
       font-size: 32px
@@ -51,6 +57,10 @@ $w_mobile_boader: 400px
     background-color: #222
     color: white
     @include locateCenter()
+    .f_infos
+      width: $w_foot
+      display: grid
+      grid-template-columns: $w_ctrl $w_ctrl $w_ctrl 1fr $w_ctrl
 
   .content
     display: grid
